@@ -3,7 +3,7 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, InternalServerErr
 import { Request, Response } from "express";
 
 
-//this class will catch every http exception and throw it to the user using this business logic
+//this class will catch every http exception and throw it to the user using the provided business logic
 @Catch(HttpException,InternalServerErrorException)
 export class HttpExceptionFilter implements ExceptionFilter {
 
