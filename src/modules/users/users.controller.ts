@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginDTO } from './dto/login.dto';
+import { AuthGuard } from 'src/guard/auth.guard';
+import { request } from 'http';
 
 @Controller('users')
 export class UsersController {
@@ -17,6 +19,17 @@ export class UsersController {
     return this.usersService.login(loginDTO);
   }
 
+  @Post('refresh')
+  async refresh(@Body() body: { refreshToken: string }) {
+    return this.usersService.refreshToken(body.refreshToken);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async me(@Req() req : any){
+ return this.usersService.me(req?.userId)
+  }
+  /*
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -35,5 +48,5 @@ export class UsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
-  }
+  }*/
 }

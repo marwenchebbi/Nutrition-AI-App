@@ -1,7 +1,7 @@
 import { TypeHelpOptions } from './../../../node_modules/class-transformer/types/interfaces/type-help-options.interface.d';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { LoginDTO } from './dto/login.dto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -48,12 +48,8 @@ export class UsersService {
       throw new BadRequestException(errors.wrongCredentials);
     }
 
-
     const tokens = await this.generateTokens(user?.id)
-
     return tokens
-
-
   }
 
   async generateTokens(userId : number){
@@ -66,7 +62,6 @@ export class UsersService {
       refreshToken
     }
   }
-
 
   async storeRefreshToken(token: string, userId: number) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -98,21 +93,72 @@ export class UsersService {
       await this.refreshTokenRepository.save(newToken);
     }
   }
-  
 
-  findAll() {
-    return `This action returns all users`;
+  async refreshToken(refreshToken: string) {
+    // Find the refresh token in the database
+    const storedToken = await this.refreshTokenRepository.findOne({
+      where: { token: refreshToken },
+      relations: ['user'],
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // Check if the token has expired
+    if (storedToken.expiryDate < new Date()) {
+      // Remove expired token
+      await this.refreshTokenRepository.remove(storedToken);
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
+    // Verify the JWT token structure
+    try {
+      const payload = await this.jwtservice.verify(refreshToken);
+      
+      // Check if the user still exists
+      const user = await this.userRepository.findOne({
+        where: { id: payload.userId }
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Generate new tokens
+      const tokens = await this.generateTokens(user.id);
+      
+      return tokens;
+
+    } catch (error) {
+      // Invalid JWT token
+      await this.refreshTokenRepository.remove(storedToken);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async logout(refreshToken: string) {
+    // Find and remove the refresh token from the database
+    const storedToken = await this.refreshTokenRepository.findOne({
+      where: { token: refreshToken },
+    });
+
+    if (storedToken) {
+      await this.refreshTokenRepository.remove(storedToken);
+    }
+
+    return { message: 'Logged out successfully' };
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+  async me(id : number){
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    const user = await this.userRepository.findOne({where: {id}})
+    if(!user){
+      throw new  NotFoundException(errors.notFound)
+    }
+    return {
+      name : user?.name,
+      email : user?.email
+    }
   }
 }

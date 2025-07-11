@@ -12,4 +12,16 @@ export const errors = {
         error: 'Bad Request',
         code: 'BAD_REQUEST'
     },
+    invalidToken: {
+        statusCode: 403,
+        message: 'Not Authorzied',
+        error: 'Invalid Token',
+        code: 'INVALID_TOKEN'
+    },
+    notFound: {
+        statusCode: 404,
+        message: 'Resource not found',
+        error: 'Not Found',
+        code: 'NOT_FOUND'
+    },
 }
